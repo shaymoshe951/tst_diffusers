@@ -84,4 +84,31 @@ class NoiseImageEst(nn.Module):
         self.out = self.dense_out(self.rl01_out)
         return self.out
 
+class NoiseImageEstImg2(nn.Module):
+    def __init__(self, t_samples, image_shape):
+        super(NoiseImageEstImg2, self).__init__()
+        self.image_shape = image_shape
+        self.emb = nn.Embedding(t_samples, image_shape[0])
+        self.dense = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(image_shape[0]*(image_shape[1] + 1), 400),
+            nn.ReLU(),
+            nn.Linear(400, 100),
+            nn.ReLU(),
+            nn.Linear(100, 50),
+            nn.ReLU(),
+            nn.Linear(50, 100),
+            nn.ReLU(),
+            nn.Linear(100, 400),
+            nn.ReLU(),
+            nn.Linear(400, 28*28),
+            nn.ReLU(),
+        )
+
+
+    def forward(self, xt, t):
+        self.emb_t_out = self.emb(t.view(xt.shape[0],1,1))
+        self.comb = torch.cat([xt, self.emb_t_out], dim=2)
+        self.out = self.dense(self.comb)
+        return self.out.view(self.out.shape[0], 1, 28, 28)
 
