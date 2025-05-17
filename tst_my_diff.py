@@ -86,7 +86,7 @@ def eval(model, scheduler, check_point_fn = None, device='cuda'):
     model.eval()
     xt = torch.randn((16,1,28,28),device=device)
     for t in reversed(scheduler.timesteps[1:]):
-        t_t = torch.tensor([t],device=device).repeat(xt.shape[0])
+        t_t = torch.tensor([t],device=device).repeat(xt.shape[0]).view(xt.shape[0], 1, 1, 1)
         eps_th_est = model(xt,t_t)
         xt = scheduler.step_back(xt, eps_th_est, t)
 
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     mp.set_start_method('spawn', force=True)
     nepochs = 400  # 825
     batch_size = 32
-    learning_rate = 0.001
+    learning_rate = 0.0002
     log_every = 20
 
     scheduler = SchedulerLinear() #Scheduler()
@@ -114,6 +114,6 @@ if __name__ == '__main__':
     # model = NoiseImageEstImg2(scheduler.T, (28, 28))
     nparams = sum(p.numel() for p in model.parameters())
     print(f"Model has {nparams} parameters")
-    # train(model, scheduler, nepochs, batch_size, learning_rate,log_every=log_every)
-    eval(model,scheduler, check_point_fn='model_checkpoint.pth')
+    train(model, scheduler, nepochs, batch_size, learning_rate,log_every=log_every, check_point_fn='model_checkpoint.pth')
+    # eval(model,scheduler, check_point_fn='model_checkpoint.pth')
     # eval(model,scheduler)

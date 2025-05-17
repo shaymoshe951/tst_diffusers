@@ -65,7 +65,7 @@ class NoiseImageEst(nn.Module):
         self.dense_out = nn.Conv2d(4,1, kernel_size=1)
 
     def forward(self, xt, t):
-        self.t_emb_out = self.emb(t)
+        self.t_emb_out = self.emb(t-1)
         self.comb_image = self.t_emb_out.view(xt.shape) + xt
         self.ll00_out = self.left_layer0_0(self.comb_image)
         self.ll0to1_out = self.left_layer0to1(self.ll00_out)

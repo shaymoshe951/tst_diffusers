@@ -37,7 +37,7 @@ class SchedulerLinear():
     def __init__(self, device='cuda'):
         self.device = device
         self.T = 1000
-        self.timesteps = torch.arange(1,self.T+1).to(device)
+        self.timesteps = torch.arange(0,self.T).to(device)
         t = self.timesteps
         T = self.T
         self.betatv = torch.linspace(0.0001, 0.02, T).to(device)
@@ -57,7 +57,7 @@ class SchedulerLinear():
     def step_back(self, xt, eps_th_est, t):
         bar_alphat = self.bar_alphatv[t]
         alphat = self.alphatv[t]
-        bar_alphat_1 = self.bar_alphat / alphat
+        bar_alphat_1 = bar_alphat / alphat
         betat = 1-alphat
         sigmat = (1-bar_alphat_1)/(1-bar_alphat) * betat if t > 1 else 0
         noise_t = torch.randn_like(xt, device=self.device)
