@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 
 def create_conv33relu(nin_channels = 1, nout_channels = 1):
         return nn.Sequential(
@@ -36,6 +38,38 @@ def copy_n_crop(encoder_features, decoder_features):
     # Concatenate along the channel dimension
     return torch.cat([cropped_encoder_features, decoder_features], dim=1)
 
+class Attention(nn.Module):
+    def __init__(self, nchannels, d_k = None):
+        if d_k is None:
+            d_k = nchannels
+
+        self.d_k = d_k
+        self.nchannels = nchannels
+        # Learnable projection matrices for Q, K, V
+        self.w_q = nn.Linear(nchannels, d_k)
+        self.w_k = nn.Linear(nchannels, d_k)
+        self.w_v = nn.Linear(nchannels, d_k)
+
+    def forward(self, x):
+        # Step 1: Project input to Q, K, V
+        Q = self.w_q(x)  # shape: (B, N, d_k)
+        K = self.w_k(x)  # shape: (B, N, d_k)
+        V = self.w_v(x)  # shape: (B, N, d_k)
+
+        # Step 2: Compute attention scores: Q @ K^T / sqrt(d_k)
+        # Note: transpose K to get (B, d_k, N) so we can do batch matmul
+        attention_logits = torch.matmul(Q, K.transpose(-2, -1)) / (self.d_k ** 0.5)  # shape: (B, N, N)
+
+        # Step 3: Softmax over the last dimension (keys)
+        attention_weights = F.softmax(attention_logits, dim=-1)  # shape: (B, N, N)
+
+        # Step 4: Multiply with V to get the attention output
+        self.attention_output = torch.matmul(attention_weights, V)  # shape: (B, N, d_k)
+
+        # Optional: Add residual connection, feed-forward, etc.
+        return self.attention_output
+
+
 class NoiseImageEst(nn.Module):
     def __init__(self, t_samples, image_shape):
         super(NoiseImageEst, self).__init__()
@@ -63,6 +97,16 @@ class NoiseImageEst(nn.Module):
         # self.right_layer0_0 = Conv33Relu(32,32)
 
         self.dense_out = nn.Conv2d(4,1, kernel_size=1)
+
+    def pos_encoding(self, t, channels):
+        inv_freq = 1.0 / (
+            10000
+            ** (torch.arange(0, channels, 2, device=self.device).float() / channels)
+        )
+        pos_enc_a = torch.sin(t.repeat(1, channels // 2) * inv_freq)
+        pos_enc_b = torch.cos(t.repeat(1, channels // 2) * inv_freq)
+        pos_enc = torch.cat([pos_enc_a, pos_enc_b], dim=-1)
+        return pos_enc
 
     def forward(self, xt, t):
         self.t_emb_out = self.emb(t-1)

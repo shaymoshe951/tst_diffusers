@@ -7,7 +7,7 @@ from torch import optim
 from tqdm import tqdm
 import logging
 
-from noise_image_est import NoiseImageEst, NoiseImageEstImg2
+from unets_imp import UNetS
 from dataset_handler import get_mnist_data
 
 # from torch.utils.tensorboard import SummaryWriter
@@ -85,18 +85,19 @@ def eval(model, scheduler, check_point_fn = None, device='cuda'):
     model.to(device)
     model.eval()
     xt = torch.randn((16,1,28,28),device=device)
-    for t in reversed(scheduler.timesteps[1:]):
-        t_t = torch.tensor([t],device=device).repeat(xt.shape[0]).view(xt.shape[0], 1, 1, 1)
-        eps_th_est = model(xt,t_t)
-        xt = scheduler.step_back(xt, eps_th_est, t)
+    with torch.no_grad():
+        for t in reversed(scheduler.timesteps[1:]):
+            t_t = torch.tensor([t],device=device).repeat(xt.shape[0]).view(xt.shape[0], 1, 1, 1)
+            eps_th_est = model(xt,t_t)
+            xt = scheduler.step_back(xt, eps_th_est, t)
 
-    def show_images(images):
-        fig, axes = plt.subplots(1, len(images), figsize=(10, 2))
-        for img, ax in zip(images, axes):
-            ax.imshow(img.squeeze(), cmap='gray')
-            ax.set_title(f'Label')
-            ax.axis('off')
-        plt.show()
+        def show_images(images):
+            fig, axes = plt.subplots(1, len(images), figsize=(10, 2))
+            for img, ax in zip(images, axes):
+                ax.imshow(img.squeeze(), cmap='gray')
+                ax.set_title(f'Label')
+                ax.axis('off')
+            plt.show()
 
     show_images(xt.cpu().detach() * 2 + 1)
 
@@ -106,14 +107,15 @@ if __name__ == '__main__':
     mp.set_start_method('spawn', force=True)
     nepochs = 400  # 825
     batch_size = 32
-    learning_rate = 0.0002
+    learning_rate = 3e-4
     log_every = 20
 
     scheduler = SchedulerLinear() #Scheduler()
-    model = NoiseImageEst(scheduler.T, (28, 28))
+    # model = NoiseImageEst(scheduler.T, (28, 28))
     # model = NoiseImageEstImg2(scheduler.T, (28, 28))
+    model = UNetS((28, 28, 1))
     nparams = sum(p.numel() for p in model.parameters())
     print(f"Model has {nparams} parameters")
-    train(model, scheduler, nepochs, batch_size, learning_rate,log_every=log_every, check_point_fn='model_checkpoint.pth')
+    train(model, scheduler, nepochs, batch_size, learning_rate,log_every=log_every)
     # eval(model,scheduler, check_point_fn='model_checkpoint.pth')
     # eval(model,scheduler)
