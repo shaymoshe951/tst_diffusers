@@ -28,7 +28,7 @@ class Scheduler():
         bar_alphat_1 = self.bar_alphatv[t-1] if t > 1 else 1
         alphat = bar_alphat/bar_alphat_1
         betat = 1-alphat
-        sigmat = (1-bar_alphat_1)/(1-bar_alphat) * betat if t > 1 else 0
+        sigmat = torch.sqrt(betat) #(1-bar_alphat_1)/(1-bar_alphat) * betat if t > 1 else 0
         noise_t = torch.randn_like(xt, device=self.device)
         x_prev = 1/torch.sqrt(alphat)*( xt - betat*eps_th_est/torch.sqrt(1-bar_alphat) ) + sigmat * noise_t
         return x_prev
@@ -59,8 +59,11 @@ class SchedulerLinear():
         alphat = self.alphatv[t]
         bar_alphat_1 = bar_alphat / alphat
         betat = 1-alphat
-        sigmat = (1-bar_alphat_1)/(1-bar_alphat) * betat if t > 1 else 0
-        noise_t = torch.randn_like(xt, device=self.device)
+        sigmat = torch.sqrt(betat) #(1-bar_alphat_1)/(1-bar_alphat) * betat if t > 1 else 0
+        if t > 1:
+            noise_t = torch.randn_like(xt, device=self.device)
+        else:
+            noise_t = torch.zeros_like(xt, device=self.device)
         x_prev = 1/torch.sqrt(alphat)*( xt - betat*eps_th_est/torch.sqrt(1-bar_alphat) ) + sigmat * noise_t
         return x_prev
 
