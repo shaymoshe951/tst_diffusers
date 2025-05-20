@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
-def get_mnist_data(batch_size):
+def get_mnist_data(batch_size, flag_test=False):
     transform = transforms.Compose([
         transforms.ToTensor(),  # Convert images to PyTorch tensors
         transforms.Normalize((0.5,), (0.5,))  # Normalize to range [-1, 1]
@@ -9,8 +9,9 @@ def get_mnist_data(batch_size):
     train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
     train_loader = DataLoader(train_dataset, batch_size = batch_size, shuffle = True, pin_memory=True, num_workers = 4, persistent_workers=True)
-    # test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=False,  pin_memory=True
-    #                 num_workers = 0, persistent_workers = True)
+    if flag_test:
+        test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=False, pin_memory=True, num_workers = 4, persistent_workers=True)
+        return train_loader, test_loader
 
     return train_loader
 
